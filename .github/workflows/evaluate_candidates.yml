@@ -1,0 +1,44 @@
+name: Run Student Course Manager Evaluator
+
+on:
+  workflow_dispatch:
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Evaluator Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r ${{ github.workspace }}/evaluate/requirements.txt
+          pip install openpyxl
+
+      - name: Setup SSH Access
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.ENCODED_SSH_KEY }}" | base64 -d > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ls -l ~/.ssh
+          file ~/.ssh/id_rsa
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@52.221.225.109 'echo ✅ Connected'
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+      - name: Run Evaluation Script
+        run: |
+          mkdir -p student_repos
+          PYTHONPATH=${{ github.workspace }}/student_repos python ${{ github.workspace }}/evaluate/evaluate.py
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ github.event.repository.name }}-${{ github.run_id }}
+          path: results/summary.xlsx
