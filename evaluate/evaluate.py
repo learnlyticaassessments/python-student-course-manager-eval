@@ -1,99 +1,58 @@
 import os
 import sys
 import pandas as pd
-import importlib.util
 import subprocess
 from report_generator import generate_reports
 
+POINTS_PER_PASS = 2
 
-def load_student_module(student_file):
-    """Dynamically load student.py with improved error handling"""
-    try:
-        # Construct the full path to student.py
-        full_path = os.path.abspath(student_file)
-        
-        # Generate a unique module name to avoid import conflicts
-        module_name = f"student_module_{os.path.basename(os.path.dirname(full_path))}"
-        
-        # Create the module specification
-        spec = importlib.util.spec_from_file_location(module_name, full_path)
-        
-        # Create the module
-        student_module = importlib.util.module_from_spec(spec)
-        
-        # Add the module to sys.modules to make it importable
-        sys.modules[module_name] = student_module
-        
-        # Execute the module
-        spec.loader.exec_module(student_module)
-        
-        return student_module
-    except Exception as e:
-        print(f"Error importing student module from {student_file}: {e}")
-        raise
-
-def evaluate_student_code(student_id, local_path):
+def evaluate_student_code(student_id, student_file):
     print(f"🔍 Evaluating code for {student_id}...")
-    student_file = os.path.join(local_path, "student.py")
 
-    os.environ['CURRENT_STUDENT_DIR'] = local_path
+    # Copy student solution to workspace
+    workspace_dir = os.path.join(os.getcwd(), "workspace")
+    os.makedirs(workspace_dir, exist_ok=True)
+    target_file = os.path.join(workspace_dir, "solution.py")
+    os.system(f"cp {student_file} {target_file}")
 
-    sys.path.insert(0, local_path)
+    # Clear previous report
+    report_path = os.path.join(workspace_dir, "report.txt")
+    if os.path.exists(report_path):
+        os.remove(report_path)
 
-    # 1. Load student.py FIRST
-    try:
-        load_student_module(student_file)
-    except Exception as e:
-        print(f"Error loading student module: {e}")
-        return {}, 0
-    
-    # 2. Run tests using pytest
-    print("Running pytest...")
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "evaluate/test_cases.py", "--tb=short", "-v"],
+    # Run driver.py
+    print("🚀 Running driver...")
+    subprocess.run(
+        [sys.executable, ".core/driver.py"],
         capture_output=True,
-        text=True,
-        cwd=os.getcwd(),
-        env=os.environ.copy()  # Pass the modified environment
+        text=True
     )
 
-    print(result)
-
-    # 3. Parse pytest output
+    # Parse report
     results = {}
     total_score = 0
-    from test_cases import test_suite
 
-    seen = set()
-    # Parse console output for test results
-    for line in result.stdout.split('\n'):
-        for tc_id, (_, max_score) in test_suite.items():
-            if tc_id in line and tc_id not in seen:
-                seen.add(tc_id)
-                if "PASSED" in line:
-                    results[tc_id] = max_score
-                    total_score += max_score
-                    print(f"  - {tc_id}: ✅ Passed ({max_score}/{max_score})")
-                elif "FAILED" in line:
-                    results[tc_id] = 0
-                    print(f"  - {tc_id}: ❌ Failed (0/{max_score})")
+    if not os.path.exists(report_path):
+        print("❌ report.txt not found. Possible crash in student code.")
+        return {}, 0
 
-    # If no results found, consider all tests failed
-    if not results:
-        for tc_id, (_, max_score) in test_suite.items():
-            results[tc_id] = 0
-            print(f"  - {tc_id}: ❌ Failed (0/{max_score})")
+    with open(report_path, "r") as f:
+        lines = f.readlines()
 
-    # Print total score
-    total_possible = sum(m for _, m in test_suite.values())
-    print(f"🏁 Total score for {student_id}: {total_score} / {total_possible}")
+    test_index = 1
+    for line in lines:
+        if "Test Case" in line:
+            test_name = f"Test Case {test_index}"
+            if "✅" in line:
+                results[test_name] = POINTS_PER_PASS
+                total_score += POINTS_PER_PASS
+            else:
+                results[test_name] = 0
+            test_index += 1
 
-    # Print error output for debugging
-    if result.stderr:
-        print("🚨 Pytest Error Output:")
-        print(result.stderr)
-
+    print(f"🏁 Total score for {student_id}: {total_score} points")
     return results, total_score
+
 
 def run_all():
     print("📄 Reading student list from evaluate/students.csv...")
@@ -109,16 +68,16 @@ def run_all():
         student_dir = f"student_repos/{student_id}"
         os.makedirs(student_dir, exist_ok=True)
 
-        scp_command = f"scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@{ip}:/home/ubuntu/python-mini-grocery/student.py {student_dir}/"
+        scp_command = f"scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@{ip}:/home/ubuntu/python-mini-grocery/student.py {student_dir}/solution.py"
         print(f"🔄 Running SCP: {scp_command}")
         os.system(scp_command)
 
-        student_file = os.path.join(student_dir, "student.py")
+        student_file = os.path.join(student_dir, "solution.py")
         if not os.path.exists(student_file):
-            print(f"❌ student.py missing for {student_id}. Skipping.")
+            print(f"❌ solution.py missing for {student_id}. Skipping.")
             continue
 
-        res, total = evaluate_student_code(student_id, student_dir)
+        res, total = evaluate_student_code(student_id, student_file)
         results[student_id] = {
             "name": row["student_name"],
             "email": row["email"],
@@ -129,6 +88,7 @@ def run_all():
     print("\n📝 Generating final reports...")
     generate_reports(results)
     print("✅ Evaluation complete. Reports generated.")
+
 
 if __name__ == "__main__":
     print("🚀 Starting student code evaluation...\n")
