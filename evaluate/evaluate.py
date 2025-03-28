@@ -68,7 +68,7 @@ def run_all():
         student_dir = f"student_repos/{student_id}"
         os.makedirs(student_dir, exist_ok=True)
 
-        scp_command = f"scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@{ip}:/home/ubuntu/python-mini-grocery/student.py {student_dir}/solution.py"
+        scp_command = f"scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@{ip}:/home/ubuntu/python-full-student-course-manager/solution.py {student_dir}/solution.py"
         print(f"🔄 Running SCP: {scp_command}")
         os.system(scp_command)
 
