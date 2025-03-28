@@ -18,7 +18,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r ${{ github.workspace }}/evaluate/requirements.txt
+          if [ -f "${{ github.workspace }}/evaluate/requirements.txt" ]; then
+            pip install -r ${{ github.workspace }}/evaluate/requirements.txt
+          fi
           pip install openpyxl
 
       - name: Setup SSH Access
