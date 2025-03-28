@@ -21,9 +21,9 @@ def evaluate_student_code(student_id, student_file):
         os.remove(report_path)
 
     # Run driver.py
-    print("🚀 Running driver...")
+    print("🚀 Running the workspace run.py...")
     subprocess.run(
-        [sys.executable, ".core/driver.py"],
+        [sys.executable, "workspace/run.py"],
         capture_output=True,
         text=True
     )
