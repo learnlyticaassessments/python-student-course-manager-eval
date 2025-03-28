@@ -1,6 +1,5 @@
 import os
 import sys
-import pandas as pd
 import subprocess
 from report_generator import generate_reports
 
