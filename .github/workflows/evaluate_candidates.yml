@@ -29,7 +29,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ls -l ~/.ssh
           file ~/.ssh/id_rsa
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@52.221.225.109 'echo ✅ Connected'
+          # ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@52.221.225.109 'echo ✅ Connected'
           ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
       - name: Run Evaluation Script
