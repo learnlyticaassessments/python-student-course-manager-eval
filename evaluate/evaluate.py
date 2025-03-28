@@ -75,6 +75,12 @@ def run_all():
         student_file = os.path.join(student_dir, "solution.py")
         if not os.path.exists(student_file):
             print(f"❌ solution.py missing for {student_id}. Skipping.")
+            results[student_id] = {
+                "name": row["student_name"],
+                "email": row["email"],
+                "test_results": {},
+                "total": 0
+            }
             continue
 
         res, total = evaluate_student_code(student_id, student_file)
