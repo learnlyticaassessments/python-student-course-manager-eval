@@ -27,7 +27,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "${{ secrets.ENCODED_SSH_KEY }}" | base64 -d > ~/.ssh/id_rsa
+          echo "${{ secrets.ENCODED_CANDIDATE_SSH_KEY }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ls -l ~/.ssh
           file ~/.ssh/id_rsa
